@@ -1,4 +1,4 @@
-﻿//d3-chart.js v1.0.0 Copyright 2021 m.k.  MIT License
+﻿/*d3-chart.js v1.0.0 Copyright 2021 m.k.  MIT License*/
 ; (function (globalObject) {
     'use strict';
 
@@ -34,83 +34,9 @@
         return false;
     }
 
-    var DataOptions = {
-        id: undefined,
-        values: [],
-        title: '',
-        type: undefined,
-        step: undefined,
-        sorted: undefined,
-        xScaleNo: 1, //軸の指定にするつもり
-        yScaleNo: 1,
-    };
-    var AxisOptions = {
-        show: true,
-        min: undefined,
-        max: undefined,
-        sorted: false,
-        padding: undefined,
-        label: undefined,
-        format: undefined,
-        tickSize: undefined,
-        position: undefined,
-        scalePosition: undefined,
-    }
-    var GridOptions = {
-        show: false,
-        step: undefined,
-    }
-    var PointOptions = {
-        size: 4,
-        className: undefined,
-    };
-
-    globalObject.D3ChartDefaultOptions = {
-        bindto: undefined,
-        data: undefined,
-        size: {
-            width: undefined,
-            height: undefined,
-        },
-        type: 'line',
-        step: undefined,
-        axis: {
-            y: _extend({}, AxisOptions, { position: 'left' }),
-            y2: _extend({}, AxisOptions, { show: false, position: 'right' }),
-            x: _extend({}, AxisOptions, { position: 'bottom' }),
-            x2: _extend({}, AxisOptions, { show: false, position: 'top' }),
-        },
-        grid: {
-            x: GridOptions,
-            y: GridOptions,
-        },
-        padding: {
-            top: 20,
-            left: 40,
-            bottom: 40,
-            right: 20
-        },
-        tooltip: {
-            show: false,
-            format: function (x, y, index, options) {
-                return 'x:' + x + ' y:' + y;
-            },
-
-        },
-        point: {
-            show: false,
-            style: PointOptions,
-            hoverStyle: PointOptions,
-
-        },
-        autoResize: true
-    };
 
 
-
-
-
-    globalObject.D3Chart = function (options) {
+    var D3Chart = function (options) {
 
         const self = this;
 
@@ -119,7 +45,7 @@
         render();
 
 
-        self.render = render;
+        self.flush = render;
         self.update = update;
 
 
@@ -140,21 +66,17 @@
 
         function bind(options) {
 
-            self.options = _extend({}, D3ChartDefaultOptions, options);
+            self.options = _extend({}, D3Chart.DefaultOptions, options);
 
             _bind();
         }
         function _bind() {
 
-            if (typeof self.options.bindto == 'string') {
-                var id = self.options.bindto;
+            if (_isNothing(self.options.bindto.body)) {
+                var elm = self.options.bindto;
 
                 self.options.bindto = {
-                    body: id,
-                    x: id,
-                    y: id,
-                    x2: id,
-                    y2: id,
+                    body: elm
                 };
             }
             if (_isNothing(self.options.bindto.x)) self.options.bindto.x = self.options.bindto.body;
@@ -167,7 +89,7 @@
             }
 
             for (var i = 0; i < self.options.data.length; i++) {
-                self.options.data[i] = _extend({}, DataOptions, self.options.data[i]);
+                self.options.data[i] = _extend({}, self.DataOptions, self.options.data[i]);
             }
 
             //ウィンドウサイズに合わせて自動サイズ変更イベントの設定・解除
@@ -426,21 +348,43 @@
             const container = svg.append("g");
             var axis;
             var left = 0, top = 0;
+            var target = ''; //目盛り線の長さを設定する対象。x1/x2/y1/y2
+            var innerTarget = '';
+            var targetMinus = 1;
 
-            switch (options.scalePosition || options.position) {
+            switch (options.direction || options.position) {
                 case 'top':
                     axis = d3.axisTop(scale);
+                    target = 'y1';
+                    innerTarget = 'y2';
+                    targetMinus = -1;
                     break;
                 case 'bottom':
                     axis = d3.axisBottom(scale);
+                    target = 'y2';
+                    innerTarget = 'y1';
+                    targetMinus = 1;
                     break;
                 case 'left':
                     axis = d3.axisLeft(scale);
+                    target = 'x1';
+                    innerTarget = 'x2';
+                    targetMinus = -1;
                     break;
                 case 'right':
                     axis = d3.axisRight(scale);
+                    target = 'x2';
+                    innerTarget = 'x1';
+                    targetMinus = 1;
                     break;
             }
+
+            var axisSize =
+                options.position == 'top' ? margin.top :
+                    options.position == 'bottom' ? margin.bottom :
+                        options.position == 'left' ? margin.left :
+                            options.position == 'right' ? margin.right :
+                                0;
 
             switch (options.position) {
                 case 'top':
@@ -458,46 +402,52 @@
             }
 
             var tickValues = options.values;
-            var label = undefined;
+            var labelValues = undefined;
+            var scaleValues = undefined;
 
-            if (options.step || options.tick) {
-                label = [];
+            if (options.tick && (options.tick.interval || options.tick.scaleInterval)) {
                 tickValues = [];
+                labelValues = [];
+                scaleValues = [];
 
-                if (_isNothing(options.step)) {
-                    options.step = options.tick;
+                if (_isNothing(options.tick.scaleInterval)) {
+                    options.tick.scaleInterval = options.tick;
                 }
                 if (_isNothing(options.tick)) {
-                    options.tick = options.step;
+                    options.tick = options.tick.scaleInterval;
                 }
 
-                if (_isNothing(options.step) == false) {
-                    var min = Math.ceil(minMax.min / options.step) * options.step;
-                    var max = Math.floor(minMax.max / options.step) * options.step;
+                if (_isNothing(options.tick.scaleInterval) == false) {
+                    var min = Math.ceil(minMax.min / options.tick.scaleInterval) * options.tick.scaleInterval;
+                    var max = Math.floor(minMax.max / options.tick.scaleInterval) * options.tick.scaleInterval;
 
                     if (max > min) {
-                        for (var i = min; i <= max; i += options.step) {
+                        for (var i = min; i <= max; i += options.tick.scaleInterval) {
                             tickValues.push(i);
-                            label.push(i);
+                            labelValues.push(i);
                         }
                     } else {
-                        for (var i = min; i >= max; i -= options.step) {
+                        for (var i = min; i >= max; i -= options.tick.scaleInterval) {
                             tickValues.push(i);
-                            label.push(i);
+                            labelValues.push(i);
                         }
                     }
                 }
-                if (_isNothing(options.tick) == false) {
-                    var min = Math.ceil(minMax.min / options.tick) * options.tick;
-                    var max = Math.floor(minMax.max / options.tick) * options.tick;
+                if (_isNothing(options.tick.interval) == false) {
+                    var min = Math.ceil(minMax.min / options.tick.interval) * options.tick.interval;
+                    var max = Math.floor(minMax.max / options.tick.interval) * options.tick.interval;
 
                     if (max > min) {
-                        for (var i = min; i <= max; i += options.tick) {
+                        for (var i = min; i <= max; i += options.tick.interval) {
+                            scaleValues.push(i);
+
                             if (tickValues.indexOf(i) != -1) continue;
                             tickValues.push(i);
                         }
                     } else {
-                        for (var i = min; i >= max; i -= options.tick) {
+                        for (var i = min; i >= max; i -= options.tick.interval) {
+                            scaleValues.push(i);
+
                             if (tickValues.indexOf(i) != -1) continue;
                             tickValues.push(i);
                         }
@@ -505,24 +455,81 @@
                 }
 
                 tickValues = tickValues.sort(function (a, b) { return a - b; });
+
             }
+            else if (options.tick && options.tick.count) {
+
+                tickValues = [];
+                labelValues = [];
+                scaleValues = [];
+
+                var interval = Math.ceil((minMax.max - minMax.min) / options.tick.count);
+
+                if (minMax.max >= minMax.min) {
+
+                    for (var i = minMax.min; i <= minMax.max; i += interval) {
+                        scaleValues.push(i);
+                        tickValues.push(i);
+                        labelValues.push(i);
+                    }
+
+                } else {
+
+                    for (var i = minMax.min; i >= minMax.max; i -= interval) {
+                        scaleValues.push(i);
+                        tickValues.push(i);
+                        labelValues.push(i);
+                    }
+                }
+            }
+            //TODO:重ならないように自動調整？
+            //else {
+
+            //    var tickSize = axisSize / scale.ticks().length;
+
+            //    if (tickSize < 10) {
+
+            //        tickValues = [];
+            //        labelValues = [];
+            //        scaleValues = [];
+
+            //        var interval = 10;
+
+            //        if (minMax.max >= minMax.min) {
+
+            //            for (var i = minMax.min; i <= minMax.max; i += interval) {
+            //                scaleValues.push(i);
+            //                tickValues.push(i);
+            //                labelValues.push(i);
+            //            }
+
+            //        } else {
+
+            //            for (var i = minMax.min; i >= minMax.max; i -= interval) {
+            //                scaleValues.push(i);
+            //                tickValues.push(i);
+            //                labelValues.push(i);
+            //            }
+            //        }
+            //    }
+            //}
 
             //値を反映
             if (_isNothing(tickValues) == false) {
                 axis.tickValues(tickValues).tickFormat(function (d) {
 
                     //目盛り線のみ
-                    if (label.indexOf(d) == -1) return '';
+                    if (labelValues && labelValues.indexOf(d) == -1) return '';
 
                     //値のフォーマット指定ありの場合
-                    if (options.format) return options.format(d);
+                    if (options.tick && options.tick.format) return options.tick.format(d);
 
                     //値表示
                     return d;
                 });
             } else {
                 //値のフォーマット指定のみ
-                axis.tickFormat(options.format);
+                axis.tickFormat(options.tick.format);
             }
 
 
@@ -530,155 +537,60 @@
                 .call(axis);
 
             //目盛り線の設定
-            if (options.tickSize) {
-                container.selectAll("g.tick line")
-                    .attr("y2", function (d) {
+            const defaultTickSize = axis.tickSize();
+            container.selectAll("g.tick line")
+                .attr(innerTarget, function (d) {
 
-                        if (typeof options.tickSize == 'number') {
-                            return options.tickSize;
-                        }
-                        if (typeof options.tickSize == 'function') {
-                            return options.tickSize(d);
+                    if (scaleValues && scaleValues.indexOf(d) == -1) return 0;
+
+                    if (_isNothing(options.tick)) return 0;
+
+                    if (options.tick.innerSize) {
+                        if (labelValues && labelValues.indexOf(d) != -1) {
+                            if (options.tick.scaleSize) {
+                                return options.tick.scaleSize;
+                            }
                         }
 
-                        if (label.indexOf(d) == -1)
-                            return options.tickSize.tick;
-                        else
-                            return options.tickSize.step;
-                    });
-            }
+                        if (typeof options.tick.innerSize == 'number') {
+                            return options.tick.innerSize;
+                        }
+                        if (typeof options.tick.innerSize == 'function') {
+                            return options.tick.innerSize(d);
+                        }
+                    }
+
+                    return 0;
+
+                })
+                .attr(target, function (d) {
+
+                    return getSize() * targetMinus;
+
+                    function getSize() {
+                        if (scaleValues && scaleValues.indexOf(d) == -1) return 0;
+
+                        if (_isNothing(options.tick)) return defaultTickSize;
+
+                        if (labelValues && labelValues.indexOf(d) != -1) {
+                            if (options.tick.scaleSize) {
+                                return options.tick.scaleSize;
+                            }
+                        }
+
+                        if (options.tick.size) {
+                            if (typeof options.tick.size == 'number') {
+                                return options.tick.size;
+                            }
+                            if (typeof options.tick.size == 'function') {
+                                return options.tick.size(d);
+                            }
+                        }
+
+                        return defaultTickSize;
+                    }
+                });
         }
-        //function createAxis(selector, options, scale, minMax, className) {
-
-        //    if (!options.show) return {};
-
-        //    const margin = self.options.padding;
-        //    const svg = d3.select(selector).select('svg');
-        //    const container = svg.append("g");
-        //    var axis;
-        //    var left = 0, top = 0;
-
-        //    switch (options.scalePosition || options.position) {
-        //        case 'top':
-        //            axis = d3.axisTop(scale);
-        //            break;
-        //        case 'bottom':
-        //            axis = d3.axisBottom(scale);
-        //            break;
-        //        case 'left':
-        //            axis = d3.axisLeft(scale);
-        //            break;
-        //        case 'right':
-        //            axis = d3.axisRight(scale);
-        //            break;
-        //    }
-
-        //    switch (options.position) {
-        //        case 'top':
-        //            top = margin.top;
-        //            break;
-        //        case 'bottom':
-        //            top = (self.height - margin.bottom);
-        //            break;
-        //        case 'left':
-        //            left = margin.left;
-        //            break;
-        //        case 'right':
-        //            left = (self.width - margin.right);
-        //            break;
-        //    }
-
-        //    var tickValues = options.values;
-        //    var label = undefined;
-
-        //    if (options.step || options.tick) {
-        //        label = [];
-        //        tickValues = [];
-
-        //        if (_isNothing(options.step)) {
-        //            options.step = options.tick;
-        //        }
-        //        if (_isNothing(options.tick)) {
-        //            options.tick = options.step;
-        //        }
-
-        //        if (_isNothing(options.step) == false) {
-        //            var min = Math.ceil(minMax.min / options.step) * options.step;
-        //            var max = Math.floor(minMax.max / options.step) * options.step;
-
-        //            if (max > min) {
-        //                for (var i = min; i <= max; i += options.step) {
-        //                    tickValues.push(i);
-        //                    label.push(i);
-        //                }
-        //            } else {
-        //                for (var i = min; i >= max; i -= options.step) {
-        //                    tickValues.push(i);
-        //                    label.push(i);
-        //                }
-        //            }
-        //        }
-        //        if (_isNothing(options.tick) == false) {
-        //            var min = Math.ceil(minMax.min / options.tick) * options.tick;
-        //            var max = Math.floor(minMax.max / options.tick) * options.tick;
-
-        //            if (max > min) {
-        //                for (var i = min; i <= max; i += options.tick) {
-        //                    if (tickValues.indexOf(i) != -1) continue;
-        //                    tickValues.push(i);
-        //                }
-        //            } else {
-        //                for (var i = min; i >= max; i -= options.tick) {
-        //                    if (tickValues.indexOf(i) != -1) continue;
-        //                    tickValues.push(i);
-        //                }
-        //            }
-        //        }
-
-        //        tickValues = tickValues.sort(function (a, b) { return a - b; });
-        //    }
-
-        //    //値を反映
-        //    if (_isNothing(tickValues) == false) {
-        //        axis.tickValues(tickValues).tickFormat(function (d) {
-
-        //            //目盛り線のみ
-        //            if (label.indexOf(d) == -1) return '';
-
-        //            //値のフォーマット指定ありの場合
-        //            if (options.format) return options.format(d);
-
-        //            //値表示
-        //            return d;
-        //        });
-        //    } else {
-        //        //値のフォーマット指定のみ
-        //        axis.tickFormat(options.format);
-        //    }
-
-
-        //    container.classed('d3chart-axis', true).classed(className, true).attr("transform", "translate(" + left + "," + top + ")")
-        //        .call(axis);
-
-        //    //目盛り線の設定
-        //    if (options.tickSize) {
-        //        container.selectAll("g.tick line")
-        //            .attr("y2", function (d) {
-
-        //                if (typeof options.tickSize == 'number') {
-        //                    return options.tickSize;
-        //                }
-        //                if (typeof options.tickSize == 'function') {
-        //                    return options.tickSize(d);
-        //                }
-
-        //                if (label.indexOf(d) == -1)
-        //                    return options.tickSize.tick;
-        //                else
-        //                    return options.tickSize.step;
-        //            });
-        //    }
-        //}
 
         function createXGrid(options, minMax) {
 
@@ -889,6 +801,89 @@
         }
 
     }
+
+
+
+    globalObject.D3Chart = D3Chart;
+
+    globalObject.D3Chart.DataOptions = {
+        id: undefined,
+        values: [],
+        title: '',
+        type: undefined,
+        step: undefined,
+        sorted: undefined,
+        xScaleNo: 1, //軸の指定にするつもり
+        yScaleNo: 1,
+    };
+    globalObject.D3Chart.AxisOptions = {
+        show: true,
+        min: undefined,
+        max: undefined,
+        sorted: false,
+        padding: undefined,
+        label: undefined,
+        tick: {
+            interval: undefined,
+            scaleInterval: undefined,
+            count: undefined,
+            format: undefined,
+            size: 6,
+            innerSize: 0,
+            scaleSize: undefined,
+        },
+        position: undefined,
+        direction: undefined,
+    }
+    globalObject.D3Chart.GridOptions = {
+        show: false,
+        step: undefined,
+    }
+    globalObject.D3Chart.PointOptions = {
+        size: 4,
+        className: undefined,
+    };
+
+    globalObject.D3Chart.DefaultOptions = {
+        bindto: undefined,
+        data: undefined,
+        size: {
+            width: undefined,
+            height: undefined,
+        },
+        type: 'line',
+        step: undefined,
+        axis: {
+            y: _extend({}, D3Chart.AxisOptions, { position: 'left' }),
+            y2: _extend({}, D3Chart.AxisOptions, { show: false, position: 'right' }),
+            x: _extend({}, D3Chart.AxisOptions, { position: 'bottom' }),
+            x2: _extend({}, D3Chart.AxisOptions, { show: false, position: 'top' }),
+        },
+        grid: {
+            x: D3Chart.GridOptions,
+            y: D3Chart.GridOptions,
+        },
+        padding: {
+            top: 20,
+            left: 40,
+            bottom: 40,
+            right: 20
+        },
+        tooltip: {
+            show: false,
+            format: function (x, y, index, options) {
+                return 'x:' + x + ' y:' + y;
+            },
+
+        },
+        point: {
+            show: false,
+            style: D3Chart.PointOptions,
+            hoverStyle: D3Chart.PointOptions,
+
+        },
+        autoResize: true
+    };
 
 
 
