@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+    <title>D3-Chart Demo Axis</title>
+    <link rel="stylesheet" href="style.css" type="text/css" />
+    <link rel="stylesheet" href="../d3-chart.css" type="text/css" />
+    <script type="text/javascript" src="common.js"></script>
+    <script type="text/javascript" src="d3.js"></script>
+    <script type="text/javascript" src="../d3-chart.js"></script>
+</head>
+<body>
+
+    <div id="axisX" style="width:90%; height:300px;"></div>
+    <div id="axisY"></div>
+
+    <div id="axisX2"></div>
+    <div id="axisY2"></div>
+
+    <script type="text/javascript">
+
+        new D3Chart({
+            bindto: '#axisX',
+            data: getData(),
+            type: 'spline',
+            axis: {
+                y: {
+                    tick: {
+                        interval: 0.1,
+                        scaleInterval: 0.5,
+                        size: 3,
+                        scaleSize: 6
+                    }
+                },
+                y2: {
+                    show: true,
+                },
+                x2: {
+                    show: true,
+                    scaleNo: 1
+                }
+            },
+            grid: {
+                x: {
+                    show: true,
+                    interval:10,
+                },
+                y: {
+                    show: true,
+                    interval: 0.5,
+                },
+            },
+            tooltip: {
+                show: true,
+                format: function (x, y, data) {
+                    return data.title +  '<br />' + x + '”N: ' + y;
+                }
+            },
+            padding: {
+                left: 40,
+                right: 50,
+            }
+        });
+
+    </script>
+
+</body>
+</html>

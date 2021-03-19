@@ -1,11 +1,12 @@
 ﻿.d3-chart svg {
-    font: 10px sans-serif;
+    font-size: 10px;
+    font-family: 'Meiryo';
     -webkit-tap-highlight-color: transparent;
 }
 
 .d3-chart line, .d3-chart path {
     fill: none;
-    stroke: #000
+    stroke: #000;
 }
 .d3-chart text {
     -webkit-user-select: none;
