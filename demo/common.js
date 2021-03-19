@@ -1,9 +1,9 @@
-function getData() {
+ï»¿function getData() {
     return [
         {
             //https://www.data.jma.go.jp/cpdinfo/temp/list/an_jpn.html
             id: 'temperature',
-            title: '”N•½‹Ï‹C‰·•Î·()',
+            title: 'å¹´å¹³å‡æ°—æ¸©åå·®(â„ƒ)',
             yScaleNo: 1,
             color:'firebrick',
             values: [
@@ -135,7 +135,7 @@ function getData() {
         {
             //https://www.data.jma.go.jp/cpdinfo/temp/list/an_jpn_r.html
             id: 'rainfall',
-            title: '”N•½‹Ï~…—Ê•Î·(mm)',
+            title: 'å¹´å¹³å‡é™æ°´é‡åå·®(mm)',
             yScaleNo: 2,
             color: 'dodgerblue',
             values: [
