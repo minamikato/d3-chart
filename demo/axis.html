@@ -7,19 +7,19 @@
     <script type="text/javascript" src="common.js"></script>
     <script type="text/javascript" src="d3.js"></script>
     <script type="text/javascript" src="../d3-chart.js"></script>
+    <script type="text/javascript" src="stopwatch.js"></script>
 </head>
 <body>
 
-    <div id="axisX" style="width:90%; height:300px;"></div>
-    <div id="axisY"></div>
-
-    <div id="axisX2"></div>
-    <div id="axisY2"></div>
+    <div id="axis" style="width:90%; height:300px;"></div>
 
     <script type="text/javascript">
 
-        new D3Chart({
-            bindto: '#axisX',
+        var sw = new Stopwatch();
+        sw.start();
+
+        var chart = new D3Chart({
+            bindto: '#axis',
             data: getData(),
             type: 'spline',
             axis: {
@@ -51,8 +51,18 @@
             },
             tooltip: {
                 show: true,
+                grouped: false,
                 format: function (x, y, data) {
-                    return data.title +  '<br />' + x + '”N: ' + y;
+                    return data.title + '<br />' + x + '”N: ' + y;
+                }
+            },
+            point: {
+                show: true,
+                style: {
+                    size: 2.5
+                },
+                hoverStyle: {
+                    size: 4
                 }
             },
             padding: {
@@ -60,6 +70,8 @@
                 right: 50,
             }
         });
+
+        sw.log();
 
     </script>
 

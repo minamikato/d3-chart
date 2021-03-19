@@ -1,4 +1,4 @@
-﻿/*d3-chart.js v1.0.0.1 Copyright 2021 m.k.  MIT License*/
+﻿/*d3-chart.js v1.0.0.2 Copyright 2021 m.k.  MIT License*/
 ; (function (globalObject) {
     'use strict';
 
@@ -326,10 +326,10 @@
             //---- ---- ---- ----
             //チャート追加
             //---- ---- ---- ----
-            self.charts = svg.append('g');
-            self.charts.classed('d3chart-chart', true);
-            self.points = svg.append('g');
-            self.points.classed('d3chart-point', true);
+            self.containers.charts = svg.append('g');
+            self.containers.charts.classed('d3chart-chart', true);
+            self.containers.points = svg.append('g');
+            self.containers.points.classed('d3chart-point', true);
 
             for (var i = 0; i < options.data.length; i++) {
 
@@ -341,6 +341,64 @@
                 if (!render) continue;
 
                 render.render();
+            }
+
+            //---- ---- ---- ----
+            //ツールチップ表示設定
+            //---- ---- ---- ----
+            if ((options.point && options.point.show) ||
+                (options.tooltip && options.tooltip.show)) {
+
+                self.containers.body.on('mousemove', function (d) {
+
+                    var pos = d3.mouse(this);
+
+                    //要素を取得
+                    var tooltipText = '';
+                    for (var i = 0; i < options.data.length; i++) {
+                        var data = options.data[i];
+                        var render = renderFactory(data);
+
+                        var text = render.mouseOver(i, data, pos);
+
+                        if (text) {
+                            tooltipText += (tooltipText == '' ? '' : '<br />') + text;
+                        }
+                    }
+
+                    if (tooltipText == '') {
+                        hideTooltip();
+
+                    } else {
+                        self.containers.tooltip
+                            .interrupt()
+                            .style("visibility", "visible")
+                            .style("opacity", "1")
+                            .html(tooltipText)
+                            .style("top", (d3.event.pageY - 20) + "px")
+                            .style("left", (d3.event.pageX + 10) + "px");
+                    }
+                })
+                .on("mouseout", function (d, idx, objects) {
+
+                    for (var i = 0; i < options.data.length; i++) {
+                        var data = options.data[i];
+                        var render = renderFactory(data);
+
+                        render.mouseOut();
+                    }
+
+                    if (options.tooltip && options.tooltip.show) {
+                        hideTooltip();
+                    }
+                });
+
+                function hideTooltip() {
+                    self.containers.tooltip.transition()
+                        .duration(200)
+                        .ease(d3.easeLinear)
+                        .style("opacity", "0");
+                }
             }
         }
 
@@ -424,111 +482,7 @@
                     left = (self.width - margin.right);
                     break;
             }
-
-            ////指定された値
-            //var tickValues = options.values;
-            ////ラベルを表示する値
-            //var labelValues = undefined;
-            ////目盛り線を表示する値
-            //var scaleValues = undefined;
-
-            //if (options.tick && (options.tick.interval || options.tick.scaleInterval)) {
-            //    tickValues = [];
-            //    labelValues = [];
-            //    scaleValues = [];
-
-            //    if (_isNothing(options.tick.scaleInterval)) {
-            //        options.tick.scaleInterval = options.tick.interval;
-            //    }
-            //    if (_isNothing(options.tick)) {
-            //        options.tick = options.tick.scaleInterval;
-            //    }
-
-            //    if (_isNothing(options.tick.scaleInterval) == false) {
-            //        var min = Math.ceil(minMax.min / options.tick.scaleInterval) * options.tick.scaleInterval;
-            //        var max = Math.floor(minMax.max / options.tick.scaleInterval) * options.tick.scaleInterval;
-
-            //        if (max > min) {
-            //            for (var i = min; i <= max; i += options.tick.scaleInterval) {
-            //                tickValues.push(i);
-            //                labelValues.push(i);
-            //            }
-            //        } else {
-            //            for (var i = min; i >= max; i -= options.tick.scaleInterval) {
-            //                tickValues.push(i);
-            //                labelValues.push(i);
-            //            }
-            //        }
-            //    }
-            //    if (_isNothing(options.tick.interval) == false) {
-            //        var min = Math.ceil(minMax.min / options.tick.interval) * options.tick.interval;
-            //        var max = Math.floor(minMax.max / options.tick.interval) * options.tick.interval;
-
-            //        if (max > min) {
-            //            for (var i = min; i <= max; i += options.tick.interval) {
-            //                scaleValues.push(i);
-
-            //                if (tickValues.indexOf(i) != -1) continue;
-            //                tickValues.push(i);
-            //            }
-            //        } else {
-            //            for (var i = min; i >= max; i -= options.tick.interval) {
-            //                scaleValues.push(i);
-
-            //                if (tickValues.indexOf(i) != -1) continue;
-            //                tickValues.push(i);
-            //            }
-            //        }
-            //    }
-
-            //    tickValues = tickValues.sort(function (a, b) { return a - b; });
-
-            //}
-            //else if (options.tick && options.tick.count) {
-
-            //    tickValues = [];
-            //    labelValues = [];
-            //    scaleValues = [];
-
-            //    var interval = Math.ceil((minMax.max - minMax.min) / options.tick.count);
-
-            //    if (minMax.max >= minMax.min) {
-
-            //        for (var i = minMax.min; i <= minMax.max; i += interval) {
-            //            scaleValues.push(i);
-            //            tickValues.push(i);
-            //            labelValues.push(i);
-            //        }
-
-            //    } else {
-
-            //        for (var i = minMax.min; i >= minMax.max; i -= interval) {
-            //            scaleValues.push(i);
-            //            tickValues.push(i);
-            //            labelValues.push(i);
-            //        }
-            //    }
-            //}
-
-            ////値を反映
-            //if (_isNothing(tickValues) == false) {
-            //    axis.tickValues(tickValues).tickFormat(function (d) {
-
-            //        //目盛り線のみ
-            //        if (labelValues && labelValues.indexOf(d) == -1) return '';
-
-            //        //値のフォーマット指定ありの場合
-            //        if (options.tick && options.tick.format) return options.tick.format(d);
-
-            //        //値表示
-            //        return d;
-            //    });
-            //} else if (options.tick.format) {
-            //    //値のフォーマット指定のみ
-            //    axis.tickFormat(options.tick.format);
-            //}
-
-
+            
             //目盛り線を表示するか、ラベルを表示する位置
             var tickValues = undefined;
 
@@ -784,7 +738,8 @@
             const scaleX = data.xScaleNo == 2 ? parent.scaleX2 : parent.scaleX;
             const scaleY = data.yScaleNo == 2 ? parent.scaleY2 : parent.scaleY;
 
-            var line = parent.charts.append("path")
+            //線を作成
+            var line = parent.containers.charts.append("path")
                 .datum(data.values)
                 .classed('d3chart-chart-line', true)
                 .attr("stroke", "black")
@@ -799,10 +754,10 @@
                 line.classed(data.className, true);
             }
 
-            if ((options.point && options.point.show) ||
-                (options.tooltip && options.tooltip.show)) {
+            //○を作成
+            if (options.point && options.point.show) {
 
-                var points = parent.points
+                var points = parent.containers.points
                     .append("g")
                     .selectAll("circle")
                     .data(data.values)
@@ -811,53 +766,6 @@
                     .attr("cx", function (d) { return scaleX(d[0]); })
                     .attr("cy", function (d) { return scaleY(d[1]); })
                     .classed("d3chart-point-circle", true)
-                    // タッチイベント設定
-                    //TODO:これだと重いので各丸にイベント設定ではなくマウス座標から判定する方式にしたらどうか
-                    .on("mouseover", function (d, idx, objects) {
-
-                        var elm = d3.select(objects[idx]);
-
-                        if (options.point && options.point.show) {
-                            elm.attr('r', options.point.hoverStyle.size);
-
-                            if (options.point.hoverStyle.className) {
-                                elm.classed(options.point.hoverStyle.className, true);
-                            }
-                        }
-
-                        if (options.tooltip && options.tooltip.show) {
-
-                            var text = options.tooltip.format(d[0], d[1], data, idx, options);
-
-                            parent.containers.tooltip
-                                .style("visibility", "visible")
-                                .html(text);
-                        }
-                    })
-                    .on("mousemove", function (d, idx, objects) {
-
-                        if (options.tooltip && options.tooltip.show) {
-                            parent.containers.tooltip
-                                .style("top", (d3.event.pageY - 20) + "px")
-                                .style("left", (d3.event.pageX + 10) + "px");
-                        }
-                    })
-                    .on("mouseout", function (d, idx, objects) {
-
-                        var elm = d3.select(objects[idx]);
-
-                        if (options.point && options.point.show) {
-                            elm.attr('r', options.point.style.size);
-
-                            if (options.point.hoverStyle.className) {
-                                elm.classed(options.point.hoverStyle.className, false)
-                            }
-                        }
-
-                        if (options.tooltip && options.tooltip.show) {
-                            parent.containers.tooltip.style("visibility", "hidden");
-                        }
-                    })
                     ;
 
                 if (options.point && options.point.show) {
@@ -866,6 +774,70 @@
                 else {
                     points.attr("r", 4)
                         .classed("d3chart-point-circle-hidden", true);
+                }
+            }
+        }
+
+        this.mouseOver = function (index, data, pos) {
+
+            var options = parent.options;
+            var pointerGroups = parent.containers.points.nodes()[0].childNodes;
+            var values = data.values;
+            var scaleX = data.xScaleNo == 2 ? parent.scaleX2 : parent.scaleX;
+            var scaleY = data.yScaleNo == 2 ? parent.scaleY2 : parent.scaleY;
+
+            var pointAreaR = options.point.style.size || 4;
+
+            var x1 = scaleX.invert(pos[0] - pointAreaR);
+            var x2 = scaleX.invert(pos[0] + pointAreaR);
+            var y1 = scaleY.invert(pos[1] - pointAreaR);
+            var y2 = scaleY.invert(pos[1] + pointAreaR);
+
+            for (var j = 0; j < values.length; j++) {
+                var value = values[j];
+
+                var hitX = (x1 <= value[0] && value[0] <= x2) || (x2 <= value[0] && value[0] <= x1);
+                var hitY = (y1 <= value[1] && value[1] <= y2) || (y2 <= value[1] && value[1] <= y1);
+
+                if (hitX) {
+
+                    //ツールチップを追加
+                    var tooltipText = '';
+                    if (options.tooltip.show && (options.tooltip.grouped || hitY)) {
+                        tooltipText = options.tooltip.format(value[0], value[1], data, j, options);
+                    }
+
+                    //ポイント中の○を強調
+                    if (options.point.show && hitY) {
+
+                        var elm = d3.select(pointerGroups[index].childNodes[j]);
+
+                        elm.classed('d3chart-point-circle-pointed', true)
+                            .attr('r', options.point.hoverStyle.size);
+
+                        if (options.point.hoverStyle.className) {
+                            elm.classed(options.point.hoverStyle.className, true);
+                        }
+                    }
+
+                    return tooltipText;
+                }
+            }
+
+            return '';
+        }
+
+        this.mouseOut = function () {
+
+            var options = parent.options;
+
+            if (options.point && options.point.show) {
+                var elm = d3.select('.d3chart-point-circle-pointed');
+
+                elm.classed('d3chart-point-circle-pointed', false).attr('r', options.point.style.size);
+
+                if (options.point.hoverStyle.className) {
+                    elm.classed(options.point.hoverStyle.className, false)
                 }
             }
         }
@@ -970,16 +942,15 @@
         },
         tooltip: {
             show: false,
+            grouped: true,
             format: function (x, y, data, index, options) {
                 return 'x:' + x + ' y:' + y;
             },
-
         },
         point: {
             show: false,
-            style: D3Chart.PointOptions,
-            hoverStyle: D3Chart.PointOptions,
-
+            style: _extend({}, D3Chart.PointOptions),
+            hoverStyle: _extend({}, D3Chart.PointOptions, { size: 6 }),
         },
         autoResize: true
     };
