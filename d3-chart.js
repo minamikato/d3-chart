@@ -1,4 +1,4 @@
-﻿/*d3-chart.js v1.0.0.2 Copyright 2021 m.k.  MIT License*/
+﻿/*d3-chart.js v1.0.0.3 Copyright 2021 m.k.  MIT License*/
 ; (function (globalObject) {
     'use strict';
 
@@ -231,6 +231,7 @@
         }
 
         function render() {
+
             var options = self.options;
             var selector = options.bindto.body;
             var margin = options.padding;
@@ -238,6 +239,9 @@
             var size = getGraphSize();
             var width = size.width;
             var height = size.height;
+
+            if (options.onPreRender(self) == false) return;
+            if (self.width != width || self.height != height) options.onResize(self);
 
             self.containers = {};
 
@@ -349,7 +353,7 @@
             if ((options.point && options.point.show) ||
                 (options.tooltip && options.tooltip.show)) {
 
-                self.containers.body.on('mousemove', function (d) {
+                self.containers.body.on('mousemove', function () {
 
                     var pos = d3.mouse(this);
 
@@ -369,14 +373,18 @@
                     if (tooltipText == '') {
                         hideTooltip();
 
-                    } else {
-                        self.containers.tooltip
-                            .interrupt()
-                            .style("visibility", "visible")
-                            .style("opacity", "1")
-                            .html(tooltipText)
-                            .style("top", (d3.event.pageY - 20) + "px")
-                            .style("left", (d3.event.pageX + 10) + "px");
+                    } else if (options.tooltip.show) {
+                        if (options.onTooltipNeeded(self) != false) {
+                            self.containers.tooltip
+                                .interrupt()
+                                .style("visibility", "visible")
+                                .style("opacity", "1")
+                                .html(tooltipText)
+                                .style("top", (d3.event.pageY - 20) + "px")
+                                .style("left", (d3.event.pageX + 10) + "px");
+
+                            options.onTooltipShown(self);
+                        }
                     }
                 })
                 .on("mouseout", function (d, idx, objects) {
@@ -394,12 +402,20 @@
                 });
 
                 function hideTooltip() {
+
+                    if (self.containers.tooltip.style('opacity') == '0') return; //すでに非表示
+
                     self.containers.tooltip.transition()
-                        .duration(200)
+                        .duration(options.tooltip.hideDuration)
                         .ease(d3.easeLinear)
                         .style("opacity", "0");
+
+                    options.onTooltipShown(self);
                 }
             }
+
+
+            options.onRender(self);
         }
 
 
@@ -547,13 +563,13 @@
             axis.tickValues(tickValues);
 
             //フォーマット関数を指定
-            axis.tickFormat(function (d) {
+            axis.tickFormat(function (d, idx) {
 
                 //目盛り線のみ
                 if (labelValues && labelValues.indexOf(d) == -1) return '';
 
                 //値のフォーマット指定ありの場合
-                if (options.tick && options.tick.format) return options.tick.format(d);
+                if (options.tick && options.tick.format) return options.tick.format(d, idx);
 
                 //値表示
                 return d;
@@ -706,6 +722,7 @@
             var size = getGraphSize();
 
             if (size.width != self.width || size.height != self.height) {
+
                 render();
             }
         }
@@ -767,6 +784,13 @@
                     .attr("cy", function (d) { return scaleY(d[1]); })
                     .classed("d3chart-point-circle", true)
                     ;
+
+                if (data.color) {
+                    points.attr('style', 'fill:' + data.color + ';');
+                }
+                if (data.className) {
+                    points.classed(data.className, true);
+                }
 
                 if (options.point && options.point.show) {
                     points.attr("r", options.point.style.size);
@@ -946,13 +970,23 @@
             format: function (x, y, data, index, options) {
                 return 'x:' + x + ' y:' + y;
             },
+            hideDuration: 200,
         },
         point: {
             show: false,
             style: _extend({}, D3Chart.PointOptions),
             hoverStyle: _extend({}, D3Chart.PointOptions, { size: 6 }),
         },
-        autoResize: true
+        autoResize: true,
+
+
+        //callbacks
+        onPreRender: function (self) { },
+        onRender: function (self) { },
+        onResize: function (self) { },
+        onTooltipNeeded: function (self) { },
+        onTooltipShown: function (self) { },
+        onTooltipHide: function (self) { },
     };
 
 
